@@ -16,10 +16,9 @@
 """Utility functions for operations on Model."""
 import os.path
 import tempfile
-from typing import Sequence, Optional, List
-from keras import models as models_utils
-from keras.engine import functional
+from typing import List, Optional, Sequence
 import numpy as np
+import tensorflow as tf
 from kws_streaming.layers import modes
 from kws_streaming.layers import quantize
 from kws_streaming.layers.compat import tf
@@ -28,6 +27,9 @@ from kws_streaming.models import model_flags
 from kws_streaming.models import model_params
 from kws_streaming.models import model_utils
 from kws_streaming.models import models as kws_models
+
+models_utils = tf._keras_internal.models  # pylint: disable=protected-access
+functional = tf._keras_internal.engine.functional  # pylint: disable=protected-access
 
 
 def save_model_summary(model, path, file_name='model_summary.txt'):
@@ -420,6 +422,15 @@ def model_to_tflite(
   if optimizations:
     converter.optimizations = optimizations
     if use_fp16:
+      # TODO(b/296126422): Gracefully handle float16 in quantize
+      # variables pass in the converter. We currently silently fail
+      # if float16 quantization is requested with the
+      # '_experimental_variable_quantization' set to true.
+      # Once the linked bug is fixed, we can remove the setting of
+      # '_experimental_variable_quantization' below.
+      # pylint: disable=protected-access
+      converter._experimental_variable_quantization = False
+      # pylint: enable=protected-access
       converter.target_spec.supported_types = [tf.float16]
       # pylint: disable=protected-access
       converter.target_spec._experimental_supported_accumulation_type = (
@@ -439,7 +450,21 @@ def remove_model_zero_bias(
     model_stream,
     zero_bias_reduction_steps,
 ):
-  """Removes bias from model by subtracting its output on zero input."""
+  """Removes bias from model by subtracting its output on zero input.
+
+  Important: the function supports only STREAM_INTERNAL_STATE_INFERENCE mode
+  since it uses eager execution for model conversion.
+  STREAM_EXTERNAL_STATE_INFERENCE is currently not supported because the
+  conversion done in a graph mode.
+
+  Args:
+    model_stream: Keras model prepared for streaming inference.
+    zero_bias_reduction_steps: Number of steps to collect bias statistics on
+      zero input.
+
+  Returns:
+    Keras model with subtracted from the output zero bias.
+  """
   input_tensors = [np.zeros(inp.shape) for inp in model_stream.inputs]
   temp_model_stream = tf.keras.models.clone_model(model_stream)
   temp_model_stream.set_weights(model_stream.get_weights())
@@ -447,7 +472,7 @@ def remove_model_zero_bias(
     temp_model_stream(input_tensors, training=False)
   bias = temp_model_stream(input_tensors, training=False)
   del temp_model_stream
-  if isinstance(bias, list):
+  if not isinstance(bias, list):
     bias = [bias]
   new_outputs = [
       out - tf.constant(b) for out, b in zip(model_stream.outputs, bias)
