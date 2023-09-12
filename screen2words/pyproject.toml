@@ -25,6 +25,7 @@ dependencies = [
     "tensorflow-text>=2.13.0",
     "tf-models-official>=2.13.0",
     "tensorflow-metadata>=1.13.1",
+    #"nvidia-cudnn-cu11==8.6.0.163", # install if using nvidia CUDA
 ]
 
 [project.urls]
