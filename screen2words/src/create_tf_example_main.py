@@ -26,7 +26,7 @@ import nltk
 import six
 import tensorflow as tf
 
-from screen2words import create_tf_example_fn
+from src import create_tf_example_fn
 
 FLAGS = flags.FLAGS
 

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "screen2words"
+version = "0.0.1"
+authors = [
+    { name = "Bryan Wang", email = "bryanw@dgp.toronto.edu" },
+]
+description = "Screen to Words ML Model"
+readme = "README.md"
+requires-python = "~=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "rouge-score>=0.1.2",
+    "nltk>=3.8.1",
+    "keras>=2.13.0",
+    "tensorflow>=2.13.0",
+    "apache-beam",
+    "tensorflow-text>=2.13.0",
+    "tf-models-official>=2.13.0",
+    "tensorflow-metadata>=1.13.1",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Gustl22/google-research/tree/dev/screen2words"
+"Bug Tracker" = "https://github.com/google-research/google-research/issues"
